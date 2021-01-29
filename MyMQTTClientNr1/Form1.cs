@@ -16,6 +16,7 @@ using uPLibrary.Networking.M2Mqtt.Messages;
 using Newtonsoft.Json;
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace MyMQTTClientNr1
 {
@@ -45,7 +46,18 @@ namespace MyMQTTClientNr1
                 comboBox1.SelectedIndex = 0;
             txtRefTempLastSampleVal.Text = "-";
 
-            string sBroker = "localhost";
+            chart1.Series.Clear();
+            chart1.Series.Add("FPA Temp [°C]");
+            chart1.Series["FPA Temp [°C]"].ChartType = SeriesChartType.Line;
+            chart1.ChartAreas[0].AxisX.MajorGrid.Enabled = false;
+            chart1.ChartAreas[0].AxisX.LabelStyle.Enabled = false;
+            chart1.ChartAreas[0].AxisY.MajorGrid.LineColor = Color.LightGray;
+            chart1.ChartAreas[0].AxisY.Maximum = 35.0;
+            chart1.ChartAreas[0].AxisY.Minimum = 10.0;
+
+
+            //string sBroker = "localhost";
+            string sBroker = "broker.hivemq.com";
             this.toolStripStatusLabel1.Text = "Broker is " + sBroker + ".";
             this.toolStripStatusLabel2.Text = "-";
             pictureBox1.Image = new Bitmap(iBitmapWidth, iBitmapHeight);
@@ -59,7 +71,7 @@ namespace MyMQTTClientNr1
             string sUid = Guid.NewGuid().ToString();
 
             sMqttClient.Connect(sUid);
-            sMqttClient.Subscribe(new String[] { "FrameBuffer" ,"TempCx100" }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE });
+            sMqttClient.Subscribe(new String[] { "SAC_V5_LeberKaese0001/FrameBuffer", "SAC_V5_LeberKaese0001/TempCx100", "SAC_V5_LeberKaese0001/FPATempCx100" }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE });
 
             msLogFileName = Environment.GetFolderPath(System.Environment.SpecialFolder.DesktopDirectory) + "\\LeptonLog.csv";
             if (!File.Exists(msLogFileName))
@@ -100,8 +112,20 @@ namespace MyMQTTClientNr1
                 }
             }
 
-            double minTempC = (minValue / 100.0) - 273.15;
-            double maxTempC = (maxValue / 100.0) - 273.15;
+            double minTempC;
+            double maxTempC;
+
+            if (chkConvertKtoC.Checked)
+            {
+                minTempC = (minValue / 100.0) - 273.15;
+                maxTempC = (maxValue / 100.0) - 273.15;
+            }
+            else
+            {
+                minTempC = minValue / 100.0;
+                maxTempC = maxValue / 100.0;
+            }
+            
             toolStripStatusLabel3.Text = "Max. Temp = " + maxTempC.ToString() + "°C / Min Temp = " + minTempC.ToString() + "°C";
 
             int diff = maxValue - minValue;
@@ -154,8 +178,18 @@ namespace MyMQTTClientNr1
                 ((Bitmap)pictureBox1.Image).SetPixel(column, row, Color.FromArgb(r, g, b));
             }
             pictureBox1.Refresh();
-            File.AppendAllText(msLogFileName, minTempC.ToString() + ";" + maxTempC.ToString() + ";" + getReferenceTemp().ToString() + ";" + Environment.NewLine);
-            getReferenceTemp();
+            double dRefT = 0.0;
+
+            if (chkEnableRefMeas.Checked)
+            {
+                dRefT = getReferenceTemp();
+            }
+            File.AppendAllText(msLogFileName, minTempC.ToString() + ";" + maxTempC.ToString() + ";" + dRefT.ToString() + ";" + Environment.NewLine);
+        }
+
+        private void updateChart(double FPATemp)
+        {
+            chart1.Series["FPA Temp [°C]"].Points.AddY(FPATemp);
         }
 
 
@@ -174,7 +208,7 @@ namespace MyMQTTClientNr1
 
         private void clientReceivedMessage(object sender, MqttMsgPublishEventArgs e)
         {
-            if (e.Topic == "FrameBuffer")
+            if (e.Topic == "SAC_V5_LeberKaese0001/FrameBuffer")
             {
                 byte[] abMsg = e.Message;
                 toolStripStatusLabel2.Text = "Received framebuffer: " + abMsg.Length.ToString() + "bytes";
@@ -199,10 +233,23 @@ namespace MyMQTTClientNr1
             }
             else
             {
-                if (e.Topic == "TempCx100")
+                if (e.Topic == "SAC_V5_LeberKaese0001/TempCx100")
                 {
                     string sMsg = Encoding.UTF8.GetString(e.Message);
                     File.AppendAllText(msLogFileName, sMsg);
+                }
+                else
+                {
+                    if (e.Topic == "SAC_V5_LeberKaese0001/FPATempCx100")
+                    {
+                        string sMsg = Encoding.UTF8.GetString(e.Message);
+                        double FPATemp = Convert.ToDouble(sMsg);
+                        // call the UI function in an other thread
+                        this.BeginInvoke(new MethodInvoker(delegate
+                        {
+                            updateChart(FPATemp);
+                        }));
+                    }
                 }
             }
         }
