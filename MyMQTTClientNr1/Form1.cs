@@ -33,6 +33,7 @@ namespace MyMQTTClientNr1
         private int PACKETS_PER_FRAME = 60;
         private int FRAME_SIZE_UINT16 = 82 * 60; // PACKET_SIZE_UINT16 * PACKETS_PER_FRAME;
         private bool IGNORE_TWO_FIRST_BYTES_IN_LINE = false;
+        private string MQTT_MSG_PREFIX = "SAC_V5_LeberKaese0001";
 
         string msLogFileName;
 
@@ -71,7 +72,7 @@ namespace MyMQTTClientNr1
             string sUid = Guid.NewGuid().ToString();
 
             sMqttClient.Connect(sUid);
-            sMqttClient.Subscribe(new String[] { "SAC_V5_LeberKaese0001/FrameBuffer", "SAC_V5_LeberKaese0001/TempCx100", "SAC_V5_LeberKaese0001/FPATempCx100" }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE });
+            sMqttClient.Subscribe(new String[] { MQTT_MSG_PREFIX + "/FrameBuffer", MQTT_MSG_PREFIX + "/TempCx100", MQTT_MSG_PREFIX + "/FPATempCx100" }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE });
 
             msLogFileName = Environment.GetFolderPath(System.Environment.SpecialFolder.DesktopDirectory) + "\\LeptonLog.csv";
             if (!File.Exists(msLogFileName))
@@ -208,7 +209,7 @@ namespace MyMQTTClientNr1
 
         private void clientReceivedMessage(object sender, MqttMsgPublishEventArgs e)
         {
-            if (e.Topic == "SAC_V5_LeberKaese0001/FrameBuffer")
+            if (e.Topic == MQTT_MSG_PREFIX + "/FrameBuffer")
             {
                 byte[] abMsg = e.Message;
                 toolStripStatusLabel2.Text = "Received framebuffer: " + abMsg.Length.ToString() + "bytes";
@@ -233,14 +234,14 @@ namespace MyMQTTClientNr1
             }
             else
             {
-                if (e.Topic == "SAC_V5_LeberKaese0001/TempCx100")
+                if (e.Topic == MQTT_MSG_PREFIX + "/TempCx100")
                 {
                     string sMsg = Encoding.UTF8.GetString(e.Message);
                     File.AppendAllText(msLogFileName, sMsg);
                 }
                 else
                 {
-                    if (e.Topic == "SAC_V5_LeberKaese0001/FPATempCx100")
+                    if (e.Topic == MQTT_MSG_PREFIX + "/FPATempCx100")
                     {
                         string sMsg = Encoding.UTF8.GetString(e.Message);
                         double FPATemp = Convert.ToDouble(sMsg);
