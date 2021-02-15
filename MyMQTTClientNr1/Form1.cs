@@ -33,7 +33,7 @@ namespace MyMQTTClientNr1
         private int PACKETS_PER_FRAME = 60;
         private int FRAME_SIZE_UINT16 = 82 * 60; // PACKET_SIZE_UINT16 * PACKETS_PER_FRAME;
         private bool IGNORE_TWO_FIRST_BYTES_IN_LINE = false;
-        private string MQTT_MSG_PREFIX = "SAC_V5_LeberKaese0001";
+        private string MQTT_MSG_PREFIX = "SAC_V5_LeberKaese0002";
 
         string msLogFileName;
 
@@ -53,8 +53,8 @@ namespace MyMQTTClientNr1
             chart1.ChartAreas[0].AxisX.MajorGrid.Enabled = false;
             chart1.ChartAreas[0].AxisX.LabelStyle.Enabled = false;
             chart1.ChartAreas[0].AxisY.MajorGrid.LineColor = Color.LightGray;
-            chart1.ChartAreas[0].AxisY.Maximum = 35.0;
-            chart1.ChartAreas[0].AxisY.Minimum = 10.0;
+            chart1.ChartAreas[0].AxisY.Maximum = 60.0;
+            chart1.ChartAreas[0].AxisY.Minimum = 0.0;
 
 
             //string sBroker = "localhost";
